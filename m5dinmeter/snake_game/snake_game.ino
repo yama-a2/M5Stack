@@ -52,6 +52,7 @@ int oldEncPos;
 bool encEnable = true;
 snakeInfo sInfo;
 uint16_t  conversionMatrix[NUMPIXELS_X][NUMPIXELS_Y];
+bool beepOn02 = false;
 
 Adafruit_NeoPixel pixels(NUMPIXELS_X * NUMPIXELS_Y, PIN, NEO_GRB + NEO_KHZ800);
 
@@ -80,7 +81,6 @@ void setup() {
     Serial.begin(9600);
 
     // Setup timer
-    //timer = timerBegin(0, 80, true);
     timer = timerBegin(1*1000*1000); // 1MHz
     timerAttachInterrupt(timer, &timerRoutine);
 
@@ -117,12 +117,14 @@ void loop() {
         // Change snake way
         if((newEncPos < oldEncPos - 1) && encEnable) {
             snakeTurnRight();
+            beep01();
             //Serial.println(newEncPos);
             oldEncPos = newEncPos;
             encEnable = false;
         }
         else if((newEncPos > oldEncPos + 1) && encEnable) {
             snakeTurnLeft();
+            beep01();
             //Serial.println(newEncPos);
             oldEncPos = newEncPos;
             encEnable = false;
@@ -137,6 +139,11 @@ void loop() {
             oldEncPos = 0;
             gameStatus = GAME_INIT;
         }
+    }
+
+    if (beepOn02 == true) {
+        beep02();
+        beepOn02 = false;
     }
 
     pixels.clear();
@@ -274,6 +281,7 @@ void snakeItemCheck() {
         snakeScoreAdd(1);
         snakeExtend();
         snakeItemPut();
+        beepOn02 = true;
     }
 }
 
@@ -319,7 +327,6 @@ void snakeDisplayRefresh() {
         sInfo.displayTextUpdate = false;
     }
 }
-
 
 void snakeExtend() {
     for(int i = 0; i < SNAKE_LEN_MAX; i++) {
@@ -452,4 +459,9 @@ void randomSeedReset() {
 
 void beep01() {
     DinMeter.Speaker.tone(3300, 20);
+}
+
+void beep02() {
+    DinMeter.Speaker.tone(3300, 5);
+    DinMeter.Speaker.tone(2300, 15);
 }
