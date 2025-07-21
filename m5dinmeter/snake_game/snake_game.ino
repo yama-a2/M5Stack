@@ -57,6 +57,7 @@ uint16_t  conversionMatrix[NUMPIXELS_X][NUMPIXELS_Y];
 bool rightButtonEnable = true;
 bool leftButtonEnable = true;
 bool beepOn02 = false;
+bool beepOn03 = false;
 
 Adafruit_NeoPixel pixels(NUMPIXELS_X * NUMPIXELS_Y, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
 
@@ -158,15 +159,19 @@ void loop() {
         }
     }
 
-    if (beepOn02 == true) {
-        beep02();
-        beepOn02 = false;
-    }
-
     pixels.clear();
     snakeDraw();
     pixels.show();
     snakeDisplayRefresh();
+
+    if (beepOn02 == true) {
+        beep02();
+        beepOn02 = false;
+    }
+    if (beepOn03 == true) {
+        beep03();
+        beepOn03 = false;
+    }
 }
 
 
@@ -323,6 +328,9 @@ void snakeDead() {
     // Change Display color
     DinMeter.Display.setTextColor(RED);
     sInfo.displayTextUpdate = true;
+
+    // Beep
+    beepOn03 = true;
 }
 
 void snakeDraw() {
@@ -523,4 +531,10 @@ void beep01() {
 void beep02() {
     DinMeter.Speaker.tone(3300, 5);
     DinMeter.Speaker.tone(2300, 15);
+}
+
+void beep03() {
+    DinMeter.Speaker.tone(2300, 100);
+    delay(200);
+    DinMeter.Speaker.tone(2300, 500);
 }
