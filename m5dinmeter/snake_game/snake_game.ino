@@ -1,7 +1,9 @@
 #include "M5DinMeter.h"
 #include <Adafruit_NeoPixel.h>
 
-#define PIN             2   // GPIO number which assigned to NeoPixel DIN
+#define PIN_NEOPIXEL    2   // GPIO number which assigned to NeoPixel DIN
+#define PIN_BUTTON_RIGHT    15 // GPIO number which assigned to Right button
+#define PIN_BUTTON_LEFT     13 // GPIO number which assigned to Left button
 #define NUMPIXELS_X     32
 #define NUMPIXELS_Y     8
 
@@ -52,9 +54,11 @@ int oldEncPos;
 bool encEnable = true;
 snakeInfo sInfo;
 uint16_t  conversionMatrix[NUMPIXELS_X][NUMPIXELS_Y];
+bool rightButtonEnable = true;
+bool leftButtonEnable = true;
 bool beepOn02 = false;
 
-Adafruit_NeoPixel pixels(NUMPIXELS_X * NUMPIXELS_Y, PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel pixels(NUMPIXELS_X * NUMPIXELS_Y, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
 
 
 void setup() {
@@ -78,6 +82,10 @@ void setup() {
     // Reset encoder position
     DinMeter.Encoder.readAndReset();
 
+    // Setup Dual Button Unit
+    pinMode(PIN_BUTTON_LEFT, INPUT);
+    pinMode(PIN_BUTTON_RIGHT, INPUT);
+
     Serial.begin(9600);
 
     // Setup timer
@@ -96,7 +104,7 @@ void loop() {
 
     if (gameStatus == GAME_INIT) {
         // Start Game if button is pushed
-        if (DinMeter.BtnA.wasPressed()) {
+        if (DinMeter.BtnA.wasPressed() || rightButtonOn()) {
             beep01();
             DinMeter.Encoder.readAndReset();
             snakeGameStart();
@@ -104,29 +112,38 @@ void loop() {
             gameStatus = GAME_RUNNING;
         }
         // Set game level
-        else if(newEncPos < oldEncPos - 1) {
+        else if (newEncPos < oldEncPos - 1) {
             snakeLevelUp();
             oldEncPos = newEncPos;
         }
-        else if(newEncPos > oldEncPos + 1) {
+        else if (newEncPos > oldEncPos + 1) {
             snakeLevelDown();
             oldEncPos = newEncPos;
+        }
+        else if (leftButtonOn()) {
+            snakeLevelChange();
         }
     }
     else if (gameStatus == GAME_RUNNING) {
         // Change snake way
-        if((newEncPos < oldEncPos - 1) && encEnable) {
+        if ((newEncPos < oldEncPos - 1) && encEnable) {
             snakeTurnRight();
-            beep01();
             //Serial.println(newEncPos);
             oldEncPos = newEncPos;
             encEnable = false;
         }
-        else if((newEncPos > oldEncPos + 1) && encEnable) {
+        else if ((newEncPos > oldEncPos + 1) && encEnable) {
             snakeTurnLeft();
-            beep01();
             //Serial.println(newEncPos);
             oldEncPos = newEncPos;
+            encEnable = false;
+        }
+        else if (rightButtonOn() && encEnable) {
+            snakeTurnRight();
+            encEnable = false;
+        }
+        else if (leftButtonOn() && encEnable) {
+            snakeTurnLeft();
             encEnable = false;
         }
     }
@@ -224,6 +241,7 @@ void snakeTurnRight() {
     if(sInfo.snakeWay > UP) {
         sInfo.snakeWay = RIGHT;
     }
+    beep01();
 }
 
 void snakeTurnLeft() {
@@ -231,6 +249,7 @@ void snakeTurnLeft() {
     if(sInfo.snakeWay < RIGHT) {
         sInfo.snakeWay = UP;
     }
+    beep01();
 }
 
 void snakeMove() {
@@ -415,9 +434,45 @@ void snakeLevelDown() {
     }
 }
 
+void snakeLevelChange() {
+    sInfo.level++;
+    if(sInfo.level > levelMax) {
+        sInfo.level = 0;
+    }
+    beep01();
+    snakeLevelDisplay();
+}
+
 void snakeLevelDisplay() {
     sInfo.displayText = "Lv." + String(sInfo.level);
     sInfo.displayTextUpdate = true;
+}
+
+
+//
+// Dual Button Unit functions
+//
+bool rightButtonOn() {
+    return buttonOn(&rightButtonEnable, PIN_BUTTON_RIGHT);
+}
+
+bool leftButtonOn() {
+    return buttonOn(&leftButtonEnable, PIN_BUTTON_LEFT);
+}
+
+bool buttonOn(bool *bEnable, uint8_t pin) {
+    bool ret = false;
+    int on = !digitalRead(pin);
+    if(on) {
+        if (rightButtonEnable && leftButtonEnable) {
+            *bEnable = false;
+            ret = true;
+        }
+    }
+    else {
+        *bEnable = true;
+    }
+    return ret;
 }
 
 
