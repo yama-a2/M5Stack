@@ -175,14 +175,19 @@ void loop() {
 //
 void timerRoutine() {
     if (gameStatus == GAME_RUNNING) {
-        // If head is hit to wall or itself, game over.
-        if(snakeHit() == true) {
+        // If head is hit to wall, game over
+        if(snakeWallHit()) {
             snakeDead();
             gameStatus = GAME_OVER;
         }
         else {
             snakeItemCheck();
             snakeMove();
+            // If head is hit to body, game over
+            if(snakeBodyHit()) {
+                snakeDead();
+                gameStatus = GAME_OVER;
+            }
         }
     }
     encEnable = true;
@@ -260,7 +265,7 @@ void snakeMove() {
     snakeHeadMove(&sInfo.bodyPixel[0], sInfo.snakeWay);
 }
 
-bool snakeHit() {
+bool snakeWallHit() {
     snakeBodyInfo pixel;
 
     pixel.x = sInfo.bodyPixel[0].x;
@@ -274,18 +279,21 @@ bool snakeHit() {
     else if(pixel.y < 0 || pixel.y >= NUMPIXELS_Y) {
         return true;
     }
+    else {
+        return false;
+    }
+}
 
-    // Check hit myself
-    for(int i = 0; i < SNAKE_LEN_MAX; i++) {
-        // i+1: Do not check body tail because tail will be moved.
-        if(sInfo.bodyPixel[i+1].enable == false) {
-            break;
-        }
-        else if(pixel.x == sInfo.bodyPixel[i].x && pixel.y == sInfo.bodyPixel[i].y) {
-            return true;
+bool snakeBodyHit() {
+    // Check body hit
+    for(int i = 1; i < SNAKE_LEN_MAX; i++) {
+        if(sInfo.bodyPixel[i].enable == true) {
+            if(sInfo.bodyPixel[0].x == sInfo.bodyPixel[i].x &&
+               sInfo.bodyPixel[0].y == sInfo.bodyPixel[i].y) {
+                return true;
+            }
         }
     }
-
     return false;
 }
 
@@ -318,18 +326,14 @@ void snakeDead() {
 }
 
 void snakeDraw() {
-    // Draw snake
+    // Draw snake body
     for(int i = 0; i < SNAKE_LEN_MAX; i++) {
         if(sInfo.bodyPixel[i].enable == true) {
-            // Set head and body
-            if(i == 0) {
-                neoPixelMatrixSet(sInfo.bodyPixel[i].x, sInfo.bodyPixel[i].y, sInfo.headColor);
-            }
-            else {
-                neoPixelMatrixSet(sInfo.bodyPixel[i].x, sInfo.bodyPixel[i].y, sInfo.bodyColor);
-            }
+            neoPixelMatrixSet(sInfo.bodyPixel[i].x, sInfo.bodyPixel[i].y, sInfo.bodyColor);
         }
     }
+    // Draw snake head
+    neoPixelMatrixSet(sInfo.bodyPixel[0].x, sInfo.bodyPixel[0].y, sInfo.headColor);
 
     // Draw item
     if(sInfo.itemPixel.enable == true) {
